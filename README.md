@@ -6,14 +6,14 @@
 
 All the heavy lifting is provided by the excellent `raspbian-shrink` tool written by Andrew Oakley at [Cotswoldjam](https://github.com/aoakley/cotswoldjam). I recommend you have a look at the instructions in that repository.
 
-The script `rashid` - RAspbian SHrink In Docker - should run stand-alone, but it is designed as the entry point for a Docker container. I created this because I wanted to use `raspbian-shrink` on my MacBook, but couldn't because macOS doesn't have native support for ext4 (the filesystem used in Raspbian). And also because everything should be in Docker containers.
+The script `rashid` - RAspbian SHrink In Docker - should run stand-alone alongside a copy of `raspbian-shrink`, but it is designed as the entry point for a Docker container. I created this because I wanted to use `raspbian-shrink` on my MacBook, but couldn't because macOS doesn't have native support for ext4 (the filesystem used in Raspbian). Also because everything should run in containers.
 
 
 ### Dependencies
 
 The following dependencies are required:
 
-1. Working installation of Docker >v17.05 (we use multi-stage builds)
+1. Working installation of Docker >v17.05 (we use multi-stage builds);
 2. Raspbian image (for example a dd copy of an SD-card), this does not work with Noobs.
 
 ### Usage
@@ -22,14 +22,14 @@ The following dependencies are required:
 ```
 docker build --no-cache --shrink -t <tag>/rashid .
 ```
-Replacing <tag> with the name of your Docker repository.
+Replacing `<tag>` with the name of your Docker repository. The Cotswoldjam repository is pulled in during the first build stage.
 
 2. Assuming the image you want to shrink is contained in the current working directory, run the container:
 
 ```
 docker run --rm -it -v `pwd`:/work-dir --device=/dev:/dev/ --cap-add=SYS_ADMIN --name rashid <tag>/rashid [-e] [-f] [-m MB] [-y]  source.img shrunk.img
 ```
-Replace <tag> with the tag you used to build this image in the previous
+Replace `<tag>` with the tag you used to build this image in the previous
 step.
 
 ### Support and feature requests
