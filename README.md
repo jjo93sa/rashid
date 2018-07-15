@@ -4,7 +4,7 @@
 
 `rashid` is used to shrink Raspbian images. This is useful if you've used dd or similar utility to create a bit-wise copy of a Raspberry Pi SD card. The image so created is the same size as the card capacity, but the working software occupies only a small fraction of that space. This utility shrinks the image reducing the size, thereby reducing storage requirements and transfer times.
 
-All the heavy lifting is provided by the excellent `raspbian-shrink` tool written by Andrew Oakley at [cotswoldjam](https://github.com/aoakley/cotswoldjam). I recommend you have a look at the instructions in that repository.
+All the heavy lifting is provided by the excellent `raspbian-shrink` tool written by Andrew Oakley at [cotswoldjam](https://cotswoldjam.org). I recommend you have a look at the instructions in their [repository](https://github.com/aoakley/cotswoldjam.git).
 
 The script `rashid` - RAspbian SHrink In Docker - should run stand-alone alongside a copy of `raspbian-shrink`, but it is designed as the entry point for a Docker container. I created this because I wanted to use `raspbian-shrink` on my MacBook, but couldn't because macOS doesn't have native support for ext4 (the filesystem used in Raspbian). Also because everything should run in containers.
 
