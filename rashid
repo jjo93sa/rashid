@@ -19,7 +19,7 @@
 # Usage:
 #   See Dockerfile and README.md in the repository root.
 #
-#   rashid [-e] [-f] [-m size] [-h] [-y] input.img [output.img]
+#   rashid [-e] [-d] [-f] [-m size] [-h] [-y] input.img [output.img]
 #
 # Maintainer: dr.j.osborne@gmail.com
 #
@@ -48,11 +48,12 @@ doesn't natively support the ext4 file system used on Raspbian.
 Options have been expanded over the raspbian-shrink defaults, and we try to
 handle user inputs more rigorously.
 
-rashid [-e] [-f] [-m size] [-h] [-y] input.img [output.img]
+rashid [-e] [-d] [-f] [-m size] [-h] [-y] input.img [output.img]
 
 The following options are available:
 
 -e      Set the shrunk image to expand on first boot
+-d      Debug
 -f      Force in-place shrink (output file name set to input if not given)
 -h      Display this help and exit
 -m val  val MB free space to use during shrink; raspbian-shrink defaults
@@ -68,10 +69,13 @@ echo "${HELPVAR}"
 }
 
 # Let's process the options passed from the Docker run command line
-while getopts ":em:fhy" opt; do
+while getopts ":edm:fhy" opt; do
     case ${opt} in
         e )
             EXPAND="true"
+            ;;
+        d )
+            DEBUGON="true"
             ;;
         f )
             FORCEWRITE="-f"
@@ -92,6 +96,7 @@ while getopts ":em:fhy" opt; do
             ;;
     esac
 done
+
 shift $((OPTIND -1))
 
 # Now we've dealt with the options, we need to deal with the filenames.
@@ -130,31 +135,55 @@ case $# in
 esac
 
 echo
+
+# Log some parameters if we're in debug mode (-d)
+if [ -n "$DEBUGON" ]
+then
+
 MESSAGE=$(cat <<EOF
 The following parameters have been received:
-force write = $FORCEWRITE
-free space = $FREESPACE
+
+force write = ${FORCEWRITE:-"false"}
+free space = ${FREESPACE#-m } MB
 input file = $INFILE
 output file = $OUTFILE
-expand = $EXPAND
+expand = ${EXPAND:-"false"}
 EOF
 )
-echo "$SCRIPT_NAME: ${MESSAGE}"
-echo
+    echo "$SCRIPT_NAME: ${MESSAGE}"
+    echo
+fi
 
 # Block for user confirmation that these parameters are OK if -y not specified
 if [ -z "$YESTOALL" ]
 then
+    echo "The command to be executed is:"
+    echo " raspbian-shrink $FORCEWRITE $FREESPACE $INFILE $OUTFILE"
+    if [[ -n "$EXPAND" ]]
+    then
+        echo "And then $OUTFILE will be prepared for auto-expansion"
+    else
+        echo "And no auto-expansion is configured"
+    fi
+    echo
 	read -p "$SCRIPT_NAME: Are these parameters correct? (y/n) " answer
 	case ${answer:0:1} in
 		y|Y )
-			echo "YES - CONTINUING"
+			echo "$SCRIPT_NAME: Continuing..."
 		;;
 		* )
-			echo "NO - ABORTING"
+			echo "$SCRIPT_NAME: Aborting..."
 			exit 2
 		;;
 	esac
+    echo
+fi
+
+if [ ! -e "$INFILE" ] || [ ! -f "$INFILE" ]
+then
+    # The input file doesn't exist, so we can't shrink it
+    echo "$SCRIPT_NAME: File $INFILE does not exist, aborting..."
+    exit 1
 fi
 
 # Now, run the command to shrink the image (from cotswold jam)
