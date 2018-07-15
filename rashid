@@ -1,0 +1,217 @@
+#!/bin/bash
+#
+#
+# Title: rashid
+#
+# Description:
+#   This script is intended to act as a wrapper around the excellent utility,
+#   raspbian-shrink written by Andrew Oakley, at cotswoldjam.org:
+#   https://github.com/aoakley/cotswoldjam
+#
+#   The script should work standalone, but was designed to act as an entrypoint
+#   to a Docker container. Running in a container allows the unmodified
+#   raspbian-shrink to be executed on platforms that don't support all the
+#   necessary software, for example macOS.
+#
+#   All the functionality of raspbian-shrink is supported. In addition, we
+#   include an option to make the shrunk image auto-expand on first boot.
+#
+# Usage:
+#   See Dockerfile and README.md in the repository root.
+#
+#   rashid [-e] [-f] [-m size] [-h] [-y] input.img [output.img]
+#
+# Maintainer: dr.j.osborne@gmail.com
+#
+# License: MIT, see LICENSE file in repository root
+#
+
+INFILE=""
+OUTFILE=""
+EXPAND=""
+FORCEWRITE=""
+YESTOALL=""
+DEFAULT_OUT="output.img"
+SCRIPT_NAME="$(basename $0)"
+
+function help()
+{
+	local HELPVAR=$( cat <<HELP_EOF
+
+rashid - RAspbian SHrink In Docker
+
+A Docker container to shrink Raspbian images using the excellent raspbian-shrink
+script from cotswoldjam (https://github.com/aoakley/cotswoldjam). The purpose
+of wrapping raspbian-shrink in a container was to get it to work on macOS, which
+doesn't natively support the ext4 file system used on Raspbian.
+
+Options have been expanded over the raspbian-shrink defaults, and we try to
+handle user inputs more rigorously.
+
+rashid [-e] [-f] [-m size] [-h] [-y] input.img [output.img]
+
+The following options are available:
+
+-e      Set the shrunk image to expand on first boot
+-f      Force in-place shrink (output file name set to input if not given)
+-h      Display this help and exit
+-m val  val MB free space to use during shrink; raspbian-shrink defaults
+          to 256 MB if this parameter isn't specified
+-y      Answer yes to all questions
+
+raspbian-shrink help follows:
+
+HELP_EOF
+)
+
+echo "${HELPVAR}"
+}
+
+# Let's process the options passed from the Docker run command line
+while getopts ":em:fhy" opt; do
+    case ${opt} in
+        e )
+            EXPAND="true"
+            ;;
+        f )
+            FORCEWRITE="-f"
+            ;;
+        h )
+			help
+			echo
+			/usr/local/bin/raspbian-shrink -h
+			exit
+            ;;
+        m )
+            FREESPACE="-m $OPTARG"
+            ;;
+		y )
+			YESTOALL="true"
+			;;
+        \? )
+            ;;
+    esac
+done
+shift $((OPTIND -1))
+
+# Now we've dealt with the options, we need to deal with the filenames.
+# There's either one or two with or without -f option.
+case $# in
+    1 )
+		# Only one parameter, assume it is the input file
+        INFILE="$1"
+        OUTFILE=""
+		if [ -z "$OUTFILE" ] && [ "$FORCEWRITE" == "-f" ]
+		then
+			# User specified -f, but no output file name, so assume intention
+			# was to modify file in place
+			OUTFILE="$INFILE"
+		elif [ -z "$OUTFILE" ] && [ "$FORCEWRITE" != "-f" ]
+		then
+			# User specified no output file name but also no -f flag, so assume
+			# intention was NOT to modify file in place so use a default name
+			OUTFILE=$DEFAULT_OUT
+		else
+			# All other cases, assume default output filename
+			OUTFILE=$DEFAULT_OUT
+		fi
+        ;;
+    2 )
+		# Two parameters, so assume they're the file names:
+        INFILE="$1"
+        OUTFILE="$2"
+        ;;
+    ? )
+        echo "Too many command line parameters to handle"
+        # execute help
+        /usr/local/bin/raspbian-shrink -h
+        exit 1
+        ;;
+esac
+
+echo
+MESSAGE=$(cat <<EOF
+The following parameters have been received:
+force write = $FORCEWRITE
+free space = $FREESPACE
+input file = $INFILE
+output file = $OUTFILE
+expand = $EXPAND
+EOF
+)
+echo "$SCRIPT_NAME: ${MESSAGE}"
+echo
+
+# Block for user confirmation that these parameters are OK if -y not specified
+if [ -z "$YESTOALL" ]
+then
+	read -p "$SCRIPT_NAME: Are these parameters correct? (y/n) " answer
+	case ${answer:0:1} in
+		y|Y )
+			echo "YES - CONTINUING"
+		;;
+		* )
+			echo "NO - ABORTING"
+			exit 2
+		;;
+	esac
+fi
+
+# Now, run the command to shrink the image (from cotswold jam)
+echo "$SCRIPT_NAME: Shrinking image using raspbian-shrink:"
+/usr/local/bin/raspbian-shrink ${FORCEWRITE} ${FREESPACE} ${INFILE} ${OUTFILE}
+echo "$SCRIPT_NAME: raspbian-shrink completed."
+
+if [ -n "$EXPAND" ]
+then
+	# Image is shrunk at this point, but we want it to auto-expand when restored
+	# to a new SD card. This is what the following steps arrange
+	echo "$SCRIPT_NAME: -e flag detected, configuring $OUTFILE to auto-expand"
+
+    # Make a mount point we can use
+    mkdir /mnt/image
+
+    # Fnd the start of the vfat partition, which is used for /boot
+    VFAT_START=$(fdisk -l /work-dir/$OUTFILE | sed -nr "s/^\S+1\s+([0-9]+).*\s+c\s+W95.*$/\1/p")
+
+	# Get a free loop device
+    LOOPDEVICE=$(losetup -f)
+
+    # Set-up loop device for the vfat partition
+    losetup ${LOOPDEVICE} /work-dir/$OUTFILE -o $(($VFAT_START*512))
+
+    # Mount the vfat partition
+    mount ${LOOPDEVICE} /mnt/image
+
+    # Append the init_resize script to the boot command line, stored in the
+	# cmdline.txt file. This script resizes the partition, but doesn't touch
+	# the ext4 root file system.
+    sed -i 's|$| init=/usr/lib/raspi-config/init_resize.sh|' /mnt/image/cmdline.txt
+
+    # Unmount the vfat partition and clear loop device
+    umount /mnt/image ; losetup -d $LOOPDEVICE
+
+    # Find the start of the Linux/ext4 partition (root)
+    LINUX_START=$(fdisk -l /work-dir/$OUTFILE | sed -nr "s/^\S+2\s+([0-9]+).* 83 Linux$/\1/p")
+
+	# Get a free loop device
+    LOOPDEVICE=$(losetup -f)
+
+    # Set-up loop device for the ext4 partition
+    losetup ${LOOPDEVICE} /work-dir/$OUTFILE -o $(($LINUX_START*512))
+
+    # Mount the ext4 partition
+    mount ${LOOPDEVICE} /mnt/image
+
+    # Copy the resize2fs init.d script to the /etc/init.d directory
+    # This script resizes the file system to the full extent of the partition
+    cp /tmp/resize2fs_once /mnt/image/etc/init.d/
+
+    # Symlink (using relative paths) the init.d script so it is called at boot
+    cd /mnt/image/etc/rc3.d && ln -s ../init.d/resize2fs_once S01resize2fs_once && cd /work-dir
+
+    # Unmount the ext 4 partition, and clear down the loop device
+    umount /mnt/image; losetup -d ${LOOPDEVICE}
+
+    echo "$SCRIPT_NAME: Shrunk image $OUTFILE configured for auto expansion"
+fi
