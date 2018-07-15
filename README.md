@@ -38,7 +38,7 @@ step.
 ```
 DOCKER_REPO_PREFIX=<repo>
 
-shrink()
+rashid()
 {
    docker run --rm \
        -it \
