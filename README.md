@@ -25,7 +25,7 @@ docker build --no-cache --shrink -t <tag>/rashid .
 ```
 Replacing `<tag>` with the name of your Docker repository. The Cotswoldjam repository is pulled in during the first build stage.
 
-1. Assuming the image you want to shrink is contained in the current working directory, run the container:
+2. Assuming the image you want to shrink is contained in the current working directory, run the container:
 
 ```
 docker run --rm -it -v `pwd`:/work-dir --device=/dev:/dev/ --cap-add=SYS_ADMIN --name rashid <tag>/rashid [-e] [-d] [-f] [-m MB] [-y]  source.img shrunk.img
@@ -33,7 +33,7 @@ docker run --rm -it -v `pwd`:/work-dir --device=/dev:/dev/ --cap-add=SYS_ADMIN -
 Replace `<tag>` with the tag you used to build this image in the previous
 step.
 
-1. Consider setting the `docker run` command as function in your .bashrc, or elsewhere, for easier future use:
+3. Consider setting the `docker run` command as function in your .bashrc, or elsewhere, for easier future use:
 
 ```
 DOCKER_REPO_PREFIX=<repo>
