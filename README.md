@@ -53,7 +53,7 @@ Replacing `<tag>` with the name of your Docker repository. The Cotswoldjam repos
 
 #### Shrinking an image
 
-Shrinking a disk image is achieved by running a `rashid` container from the, thus:
+Shrinking a disk image is achieved by running a `rashid` container, thus:
 
 1. Assuming the disk image you want to shrink is contained in the current working directory, and called `source.img`, run the container:
 ```
