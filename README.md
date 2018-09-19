@@ -19,24 +19,53 @@ The following dependencies are required:
 
 ### Usage
 
-1. Build the Docker image like this, from within the directory containing the Dockerfile:
+#### Options
+
+You have two options available to use `rashid`: using a pre-built image, or building your own image.
+
+#### Pre-built image
+
+I provide pre-built images for Intel and ARM (for Raspberry Pi), which can be downloaded by Docker like this:
 ```
+# For Intel:
+docker pull r.j2o.it/rashid
+```
+```
+# For ARM:
+docker pull r.j2o.it/arm32v6/rashid
+```
+And then jump right to the "Shrinking an image" section below, wherein you replace `<tag>` with `r.j2o.it` or `r.j2o.it/arm32v6` depending which image you pulled.
+
+#### Build your own image
+
+Building your own image from this repository is simple:
+
+1. Clone this repository:
+```
+git clone https://github.com/jjo93sa/rashid.git
+```
+2. Build the Docker image like this, from within the directory containing the Dockerfile:
+```
+cd rashid
 docker build --no-cache --shrink -t <tag>/rashid .
 ```
 Replacing `<tag>` with the name of your Docker repository. The Cotswoldjam repository is pulled in during the first build stage.
 
-2. Assuming the image you want to shrink is contained in the current working directory, run the container:
+#### Shrinking an image
+
+Shrinking a disk image is achieved by running a `rashid` container from the, thus:
+
+1. Assuming the disk image you want to shrink is contained in the current working directory, and called `source.img`, run the container:
+```
+# Replace <tag> with the tag you used to build this image in the previous step.
+# For example if you downloaded the pre-built ARM image, <tag> would be r.j2o.it/arm32v6
+docker run --rm -it -v `pwd`:/work-dir --device=/dev:/dev/ --cap-add=SYS_ADMIN --name rashid <tag>/rashid [-e] [-d] [-f] [-m MB] [-y] source.img shrunk.img
+```
+2. Consider setting the `docker run` command as function in your `.bashrc`, or elsewhere, for easier future use: 
 
 ```
-docker run --rm -it -v `pwd`:/work-dir --device=/dev:/dev/ --cap-add=SYS_ADMIN --name rashid <tag>/rashid [-e] [-d] [-f] [-m MB] [-y]  source.img shrunk.img
-```
-Replace `<tag>` with the tag you used to build this image in the previous
-step.
-
-3. Consider setting the `docker run` command as function in your .bashrc, or elsewhere, for easier future use:
-
-```
-DOCKER_REPO_PREFIX=<repo>
+# Replace <tag> with the value you used above
+DOCKER_REPO_PREFIX=<tag>
 
 rashid()
 {
@@ -48,6 +77,10 @@ rashid()
        --name rashid \
        ${DOCKER_REPO_PREFIX}/rashid "$@"
 }
+```
+3. After (2) reload your `.bashrc` to load the function into yuor environment:
+```
+source .bashrc
 ```
 
 ### Support and feature requests
