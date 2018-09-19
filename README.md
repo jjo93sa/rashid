@@ -55,7 +55,7 @@ Replacing `<tag>` with the name of your Docker repository. The Cotswoldjam repos
 
 Shrinking a disk image is achieved by running a `rashid` container, thus:
 
-1. Assuming the disk image you want to shrink is contained in the current working directory, and called `source.img`, run the container:
+1. Assuming the disk image you want to shrink is contained in the current working directory, and called `source.img`, run the container (scrolling required):
 ```
 # Replace <tag> with the tag you used to build this image in the previous step.
 # For example if you downloaded the pre-built ARM image, <tag> would be r.j2o.it/arm32v6
@@ -78,7 +78,7 @@ rashid()
        ${DOCKER_REPO_PREFIX}/rashid "$@"
 }
 ```
-3. After (2) reload your `.bashrc` to load the function into yuor environment:
+3. After (2) reload your `.bashrc` to load the function into your environment:
 ```
 source .bashrc
 ```
