@@ -2,17 +2,24 @@
 # Title:  rashid/Dockerfile
 #
 # Description:
-#   Dockerfile definition to execute a scripte, rashid, to shrink Raspbian
-#   images. Heavy lifting provided by https://github.com/aoakley/cotswoldjam.git
+#   Dockerfile definition to execute a script, rashid, to shrink Raspbian
+#   images. Heavy lifting by https://github.com/aoakley/cotswoldjam.git
 #
 # Dependencies:
 #   (1) Uses multistage builds, requiring Docker >17.05
 #   (2) Requires extra capabilities, and access to /dev (to use loop devices)
 #
 # Credits:
-#   Andrew Oakley and cotswoldjam.org https://github.com/aoakley/cotswoldjam.git
+#   Andrew Oakley & cotswoldjam.org https://github.com/aoakley/cotswoldjam.git
 #
 # Usage:
+#   Usage of this file is very simple, just download the image from
+#   r.j2o.it/rashid, and jump to step (2) below. The image in the repository
+#   r.j2o.it support the  following processor architectures: amd64, arm64,
+#   and arm/v7, and was built using docker buildx.
+#
+#   If instead, you'd prefer to build your own image from these files:
+#
 #   (1) Build the Docker image like this, from within the directory containing
 #       the Dockerfile:
 #
@@ -32,13 +39,14 @@
 #             <tag>/rashid [-e] [-f] [-m MB] [-y]  source.img shrunk.img
 #
 #   Replace <tag> with the tag you used to build this image in the previous
-#   step.
+#   step, or r.j2o.it if you are using the version downloaded from my registry.
 #
 # Maintainer: dr.j.osborne@gmail.com
 #
 # License: MIT, see LICENSE file in repository root
 #
-FROM alpine AS intermediate
+ARG TAG=stable-slim
+FROM alpine:latest AS intermediate
 
 # We need git
 RUN apk --no-cache update && apk --no-cache add git
@@ -46,7 +54,7 @@ RUN apk --no-cache update && apk --no-cache add git
 # Get a copy of the cotswoldjam repo, we only use raspbian-shrink
 RUN git clone https://github.com/aoakley/cotswoldjam.git
 
-FROM debian:stable-slim
+FROM debian:$TAG
 
 LABEL maintainer "dr.j.osborne@gmail.com"
 LABEL status "production"
