@@ -25,16 +25,12 @@ You have two options available to use `rashid`: using a pre-built image, or buil
 
 #### Pre-built image
 
-I provide pre-built images for Intel and ARM (for Raspberry Pi), which can be downloaded by Docker like this:
+I provide pre-built multi-architecture images for Intel and ARM (for Raspberry Pi), which can be downloaded by Docker like this:
 ```
-# For Intel:
+# For linux/amd64, linux/arm64, linux/arm:
 docker pull r.j2o.it/rashid
 ```
-```
-# For ARM:
-docker pull r.j2o.it/arm32v6/rashid
-```
-And then jump right to the "Shrinking an image" section below, wherein you replace `<tag>` with `r.j2o.it` or `r.j2o.it/arm32v6` depending which image you pulled.
+And then jump right to the "Shrinking an image" section below, wherein you replace `<tag>` with `r.j2o.it`.
 
 #### Build your own image
 
